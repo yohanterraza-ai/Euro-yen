@@ -48,13 +48,53 @@
     border-radius:14px;padding:12px 0;font-size:15px;font-variant-numeric:tabular-nums}
   .chip:active,#swap:active,#refresh:active{transform:scale(.96)}
   .label{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:26px 4px -14px}
+  .hbtns{display:flex;gap:8px}
+  #gear{background:none;border:1px solid var(--line);color:var(--muted);border-radius:20px;width:34px;font-size:15px}
+  .muted{color:var(--muted);font-size:13px}
+  .scan{display:flex;align-items:center;gap:14px;margin-top:26px;padding:16px 18px;border-radius:18px;
+    background:linear-gradient(135deg,#2a1215,#18181b);border:1px solid #4a1c22;cursor:pointer}
+  .scan:active{transform:scale(.98)}
+  .scan-ico{font-size:28px}
+  .scan b{display:block;font-size:16px}
+  .scan small{color:var(--muted);font-size:12px}
+  #results{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px}
+  .res-head{display:flex;gap:12px;align-items:center;margin-bottom:6px}
+  .res-head>div{flex:1;min-width:0}
+  #resTitle{font-weight:600}
+  #thumb{width:52px;height:52px;object-fit:cover;border-radius:10px;background:#222}
+  #resClose{background:none;border:0;color:var(--muted);font-size:18px;padding:6px}
+  .item{display:flex;gap:10px;align-items:center;padding:12px 2px;border-top:1px solid var(--line)}
+  .item.sel{background:#2a1215;border-radius:10px;padding:12px 8px}
+  .item .t{flex:1;min-width:0}
+  .item .fr{font-size:15px}
+  .item .jp{font-size:12px;color:var(--muted);margin-top:2px}
+  .item .p{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .item .e{font-size:17px;font-weight:600}
+  .item .y{font-size:12px;color:var(--muted)}
+  #resTotal{border-top:1px solid var(--line);padding-top:12px;margin-top:4px;display:flex;justify-content:space-between;font-weight:600}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--muted);border-top-color:var(--red);
+    border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  dialog{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:20px;padding:20px;width:min(92vw,420px)}
+  dialog::backdrop{background:rgba(0,0,0,.7)}
+  dialog h2{margin:0 0 8px;font-size:18px}
+  dialog a{color:#e0796f}
+  dialog input,dialog select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);
+    border-radius:12px;padding:12px;font-size:16px;margin-top:12px;font-family:inherit}
+  dialog .row{display:block;margin-top:14px;font-size:13px;color:var(--muted)}
+  .dlg-btns{display:flex;gap:10px;margin-top:18px}
+  .dlg-btns button{flex:1;padding:12px;border-radius:12px;border:0;background:var(--red);color:#fff;font-size:15px;font-weight:600}
+  .dlg-btns .ghost{background:none;border:1px solid var(--line);color:var(--text)}
   footer{margin-top:auto;padding-top:24px;font-size:11px;color:#55524e;text-align:center}
 </style>
 </head>
 <body>
   <header>
     <h1>EUR <b>⇄</b> JPY</h1>
-    <button id="refresh" type="button">↻ Actualiser</button>
+    <div class="hbtns">
+      <button id="refresh" type="button">↻ Actualiser</button>
+      <button id="gear" type="button" aria-label="Réglages">⚙︎</button>
+    </div>
   </header>
 
   <div class="conv" id="conv">
@@ -72,8 +112,40 @@
   <div id="rate">Chargement du taux…</div>
   <div id="meta"></div>
 
+  <label class="scan" id="scanBtn">
+    <input type="file" id="photo" accept="image/*" hidden>
+    <span class="scan-ico">📷</span>
+    <span><b>Scanner des prix</b><small>Photo d'une carte, d'un menu, d'une étiquette</small></span>
+  </label>
+
+  <section id="results" hidden>
+    <div class="res-head">
+      <img id="thumb" alt="">
+      <div><div id="resTitle">Analyse…</div><div id="resNote" class="muted"></div></div>
+      <button id="resClose" type="button" aria-label="Fermer">✕</button>
+    </div>
+    <div id="resList"></div>
+    <div id="resTotal" hidden></div>
+  </section>
+
   <div class="label">Montants rapides</div>
   <div class="chips" id="chips"></div>
+
+  <dialog id="settings">
+    <h2>Réglages du scan</h2>
+    <p class="muted">Le scan utilise l'IA Claude d'Anthropic. Colle ta clé API (elle reste uniquement sur cet appareil). Clé à créer sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.</p>
+    <input id="apiKey" type="password" placeholder="sk-ant-…" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <label class="row">Modèle
+      <select id="model">
+        <option value="claude-haiku-5-5">Rapide (Haiku)</option>
+        <option value="claude-sonnet-5-5">Précis (Sonnet)</option>
+      </select>
+    </label>
+    <div class="dlg-btns">
+      <button type="button" id="setCancel" class="ghost">Annuler</button>
+      <button type="button" id="setSave">Enregistrer</button>
+    </div>
+  </dialog>
 
   <footer>Taux de référence BCE via frankfurter.dev · hors marge bancaire</footer>
 
@@ -83,6 +155,7 @@
   const eur = $('eur'), jpy = $('jpy');
   const KEY = 'eurjpy-rate';
   let rate = null, last = 'eur';
+  let items = [], picked = new Set();
 
   const fmt = (n, d) => n.toLocaleString('fr-FR', {minimumFractionDigits: d, maximumFractionDigits: d});
   const parse = s => {
@@ -112,6 +185,7 @@
       `Taux du ${d.toLocaleDateString('fr-FR', {day: 'numeric', month: 'long'})}` +
       ` · vérifié à ${t.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}`;
     convert(last);
+    renderItems();
   }
 
   async function getJSON(url) {
@@ -177,6 +251,136 @@
     b.textContent = (v >= 1000 ? fmt(v / 1000, 0) + 'k' : v) + ' ¥';
     b.addEventListener('click', () => { jpy.value = fmt(v, 0); convert('jpy'); });
     $('chips').appendChild(b);
+  });
+
+  // ---------- Scan de prix (Claude API) ----------
+  const K_KEY = 'eurjpy-apikey', K_MODEL = 'eurjpy-model';
+  const store = {
+    get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } },
+    set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }
+  };
+  const dlg = $('settings');
+  let pendingFile = null;
+
+  function openSettings() {
+    $('apiKey').value = store.get(K_KEY);
+    $('model').value = store.get(K_MODEL) || 'claude-haiku-5-5';
+    dlg.showModal();
+  }
+  $('gear').addEventListener('click', openSettings);
+  $('setCancel').addEventListener('click', () => { pendingFile = null; dlg.close(); });
+  $('setSave').addEventListener('click', () => {
+    store.set(K_KEY, $('apiKey').value.trim());
+    store.set(K_MODEL, $('model').value);
+    dlg.close();
+    if (pendingFile && store.get(K_KEY)) { const f = pendingFile; pendingFile = null; scan(f); }
+  });
+
+  $('photo').addEventListener('change', e => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    if (!store.get(K_KEY)) { pendingFile = f; openSettings(); return; }
+    scan(f);
+  });
+  $('resClose').addEventListener('click', () => { $('results').hidden = true; items = []; picked.clear(); });
+
+  // Downscale to keep upload small and fast
+  function toJpeg(file, max = 1600) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        res(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => rej(new Error("Image illisible"));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+
+  const PROMPT = `Tu reçois la photo d'un menu, d'une carte, d'une grille tarifaire ou d'étiquettes de prix, probablement au Japon.
+Extrais chaque article qui a un prix. Pour chacun : le nom original tel qu'écrit, une traduction française courte et naturelle (pour un plat, ajoute entre parenthèses une description très brève si le nom seul n'est pas parlant), et le prix en yens sous forme de nombre entier.
+Si plusieurs prix pour un article (tailles, options), crée une ligne par prix et précise l'option dans la traduction.
+Signale dans "note" si les prix sont hors taxe (税抜/税別) ou TTC (税込), et toute info utile (service charge, prix par personne, etc.). Sinon note vide.
+Réponds UNIQUEMENT avec ce JSON, sans texte autour :
+{"items":[{"original":"…","fr":"…","yen":1200}],"note":"…"}
+Si aucun prix lisible : {"items":[],"note":"explication courte"}`;
+
+  async function scan(file) {
+    items = []; picked.clear();
+    $('results').hidden = false;
+    $('resList').innerHTML = '';
+    $('resTotal').hidden = true;
+    $('resTitle').innerHTML = '<span class="spinner"></span>Lecture et traduction…';
+    $('resNote').textContent = '';
+    try {
+      const dataUrl = await toJpeg(file);
+      $('thumb').src = dataUrl;
+      $('results').scrollIntoView({behavior: 'smooth', block: 'start'});
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': store.get(K_KEY),
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: store.get(K_MODEL) || 'claude-haiku-5-5',
+          max_tokens: 4096,
+          messages: [{role: 'user', content: [
+            {type: 'image', source: {type: 'base64', media_type: 'image/jpeg', data: dataUrl.split(',')[1]}},
+            {type: 'text', text: PROMPT}
+          ]}]
+        })
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const msg = j.error?.message || ('Erreur ' + r.status);
+        if (r.status === 401) throw new Error('Clé API invalide — vérifie-la dans ⚙︎');
+        throw new Error(msg);
+      }
+      const text = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+      const m = text.match(/\{[\s\S]*\}/);
+      if (!m) throw new Error('Réponse illisible, réessaie avec une photo plus nette');
+      const out = JSON.parse(m[0]);
+      items = (out.items || []).filter(it => Number.isFinite(+it.yen) && +it.yen > 0)
+                               .map(it => ({...it, yen: Math.round(+it.yen)}));
+      $('resTitle').textContent = items.length
+        ? `${items.length} prix trouvé${items.length > 1 ? 's' : ''}` : 'Aucun prix trouvé';
+      $('resNote').textContent = out.note || (items.length ? 'Touche des lignes pour les additionner' : '');
+      renderItems();
+    } catch (err) {
+      $('resTitle').textContent = 'Échec du scan';
+      $('resNote').textContent = err.name === 'TypeError' ? 'Pas de connexion ?' : err.message;
+    }
+  }
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function renderItems() {
+    if (!items.length) return;
+    $('resList').innerHTML = items.map((it, i) => `
+      <div class="item${picked.has(i) ? ' sel' : ''}" data-i="${i}">
+        <div class="t"><div class="fr">${esc(it.fr)}</div><div class="jp">${esc(it.original)}</div></div>
+        <div class="p"><div class="e">${rate ? fmt(it.yen / rate, 2) + ' €' : '–'}</div>
+          <div class="y">${fmt(it.yen, 0)} ¥</div></div>
+      </div>`).join('');
+    if (picked.size && rate) {
+      const y = [...picked].reduce((s, i) => s + items[i].yen, 0);
+      $('resTotal').innerHTML = `<span>Total (${picked.size})</span><span>${fmt(y, 0)} ¥ · ${fmt(y / rate, 2)} €</span>`;
+      $('resTotal').hidden = false;
+    } else $('resTotal').hidden = true;
+  }
+  $('resList').addEventListener('click', e => {
+    const row = e.target.closest('.item'); if (!row) return;
+    const i = +row.dataset.i;
+    picked.has(i) ? picked.delete(i) : picked.add(i);
+    renderItems();
   });
 
   // Refresh when the app comes back to the foreground, and every 30 min
