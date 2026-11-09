@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="€ ⇄ ¥">
+<meta name="theme-color" content="#0e0e10">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<title>€ ⇄ ¥</title>
+<style>
+  :root{
+    --bg:#0e0e10; --card:#18181b; --line:#2a2a2f; --text:#f5f0e8; --muted:#8a8680; --red:#bc202c;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Helvetica Neue",sans-serif}
+  body{display:flex;flex-direction:column;
+    padding:calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + 20px)}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+  h1{font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0;color:var(--muted)}
+  h1 b{color:var(--red)}
+  #refresh{background:none;border:1px solid var(--line);color:var(--muted);border-radius:20px;
+    padding:6px 12px;font-size:13px}
+  #refresh.spin{opacity:.5}
+  .field{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px 20px;
+    display:flex;align-items:center;gap:14px;transition:border-color .2s}
+  .field:focus-within{border-color:var(--red)}
+  .cur{display:flex;flex-direction:column;min-width:54px}
+  .sym{font-size:30px;font-weight:700;line-height:1}
+  .code{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.06em}
+  input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);
+    font-size:40px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums;font-family:inherit}
+  input::placeholder{color:#3c3a37}
+  .conv{display:flex;flex-direction:column}
+  .conv.swapped #fJpy{order:1} .conv.swapped .mid{order:2} .conv.swapped #fEur{order:3}
+  .mid{display:flex;justify-content:center;margin:-10px 0;position:relative;z-index:1}
+  #swap{width:44px;height:44px;border-radius:50%;background:var(--red);border:4px solid var(--bg);
+    color:#fff;font-size:18px;display:grid;place-items:center}
+  #rate{margin:22px 4px 0;font-size:15px;color:var(--text)}
+  #meta{margin:4px 4px 0;font-size:12px;color:var(--muted)}
+  #meta.err{color:#e0796f}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+  .chip{flex:1 0 calc(25% - 8px);background:var(--card);border:1px solid var(--line);color:var(--text);
+    border-radius:14px;padding:12px 0;font-size:15px;font-variant-numeric:tabular-nums}
+  .chip:active,#swap:active,#refresh:active{transform:scale(.96)}
+  .label{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin:26px 4px -14px}
+  footer{margin-top:auto;padding-top:24px;font-size:11px;color:#55524e;text-align:center}
+</style>
+</head>
+<body>
+  <header>
+    <h1>EUR <b>⇄</b> JPY</h1>
+    <button id="refresh" type="button">↻ Actualiser</button>
+  </header>
+
+  <div class="conv" id="conv">
+  <div class="field" id="fEur">
+    <div class="cur"><span class="sym">€</span><span class="code">EUR</span></div>
+    <input id="eur" inputmode="decimal" autocomplete="off" placeholder="0">
+  </div>
+  <div class="mid"><button id="swap" type="button" aria-label="Inverser">⇅</button></div>
+  <div class="field" id="fJpy">
+    <div class="cur"><span class="sym">¥</span><span class="code">JPY</span></div>
+    <input id="jpy" inputmode="numeric" autocomplete="off" placeholder="0">
+  </div>
+  </div>
+
+  <div id="rate">Chargement du taux…</div>
+  <div id="meta"></div>
+
+  <div class="label">Montants rapides</div>
+  <div class="chips" id="chips"></div>
+
+  <footer>Taux de référence BCE via frankfurter.dev · hors marge bancaire</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const eur = $('eur'), jpy = $('jpy');
+  const KEY = 'eurjpy-rate';
+  let rate = null, last = 'eur';
+
+  const fmt = (n, d) => n.toLocaleString('fr-FR', {minimumFractionDigits: d, maximumFractionDigits: d});
+  const parse = s => {
+    const v = parseFloat(String(s).replace(/\s| | /g, '').replace(',', '.'));
+    return isNaN(v) ? null : v;
+  };
+
+  function convert(from) {
+    last = from;
+    if (!rate) return;
+    if (from === 'eur') {
+      const v = parse(eur.value);
+      jpy.value = v === null ? '' : fmt(Math.round(v * rate), 0);
+    } else {
+      const v = parse(jpy.value);
+      eur.value = v === null ? '' : fmt(v / rate, 2);
+    }
+  }
+
+  function showRate(r, date, fetchedAt, stale) {
+    rate = r;
+    $('rate').textContent = `1 € = ${fmt(r, 2)} ¥  ·  1 000 ¥ = ${fmt(1000 / r, 2)} €`;
+    const d = new Date(date + 'T00:00:00');
+    const t = new Date(fetchedAt);
+    $('meta').className = stale ? 'err' : '';
+    $('meta').textContent = (stale ? 'Hors ligne — dernier taux connu · ' : '') +
+      `Taux du ${d.toLocaleDateString('fr-FR', {day: 'numeric', month: 'long'})}` +
+      ` · vérifié à ${t.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}`;
+    convert(last);
+  }
+
+  async function getJSON(url) {
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 8000);
+    try {
+      const r = await fetch(url, {cache: 'no-store', signal: ctrl.signal});
+      if (!r.ok) throw new Error(r.status);
+      return await r.json();
+    } finally { clearTimeout(to); }
+  }
+
+  async function load() {
+    $('refresh').classList.add('spin');
+    try {
+      let r, date;
+      try {
+        const j = await getJSON('https://api.frankfurter.dev/v1/latest?base=EUR&symbols=JPY');
+        r = j.rates.JPY; date = j.date;
+      } catch {
+        const j = await getJSON('https://open.er-api.com/v6/latest/EUR');
+        r = j.rates.JPY; date = new Date(j.time_last_update_unix * 1000).toISOString().slice(0, 10);
+      }
+      const data = {r, date, at: Date.now()};
+      try { localStorage.setItem(KEY, JSON.stringify(data)); } catch {}
+      showRate(r, date, data.at, false);
+    } catch {
+      let c = null;
+      try { c = JSON.parse(localStorage.getItem(KEY)); } catch {}
+      if (c) showRate(c.r, c.date, c.at, true);
+      else { $('rate').textContent = 'Taux indisponible'; $('meta').className = 'err';
+             $('meta').textContent = 'Vérifie ta connexion puis touche Actualiser.'; }
+    } finally {
+      $('refresh').classList.remove('spin');
+    }
+  }
+
+  // Cached rate first (instant display), then refresh
+  try {
+    const c = JSON.parse(localStorage.getItem(KEY));
+    if (c) showRate(c.r, c.date, c.at, false);
+  } catch {}
+  load();
+
+  eur.addEventListener('input', () => convert('eur'));
+  jpy.addEventListener('input', () => convert('jpy'));
+  eur.addEventListener('focus', () => eur.select());
+  jpy.addEventListener('focus', () => jpy.select());
+  // reformat with thousands separators on blur
+  jpy.addEventListener('blur', () => { const v = parse(jpy.value); if (v !== null) jpy.value = fmt(v, 0); });
+  eur.addEventListener('blur', () => { const v = parse(eur.value); if (v !== null) eur.value = fmt(v, 2); });
+
+  $('refresh').addEventListener('click', load);
+  $('swap').addEventListener('click', () => {
+    const swapped = $('conv').classList.toggle('swapped');
+    (swapped ? jpy : eur).focus();
+  });
+
+  const chips = [500, 1000, 3000, 5000, 10000, 20000, 50000, 100000];
+  chips.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.type = 'button';
+    b.textContent = (v >= 1000 ? fmt(v / 1000, 0) + 'k' : v) + ' ¥';
+    b.addEventListener('click', () => { jpy.value = fmt(v, 0); convert('jpy'); });
+    $('chips').appendChild(b);
+  });
+
+  // Refresh when the app comes back to the foreground, and every 30 min
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  setInterval(load, 30 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
